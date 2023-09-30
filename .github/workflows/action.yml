@@ -23,25 +23,26 @@ jobs:
       #   with:
       #     aws-region: eu-west-1
 
-      - name: Check out code
+      - name: Check out code # 소스코드 내려받기
         uses: actions/checkout@v3
         
-      - name: Run Terrascan
+      - name: Run Terrascan 
         id: terrascan
         uses: tenable/terrascan-action@main
-        with:
+        with: # 정책
           iac_type: 'terraform'
           iac_version: 'v14'
           policy_type: 'aws'
           only_warn: true
           sarif_upload: true
 
-      - name: Upload SARIF file
+      - name: Upload SARIF file # 정적 분석 결과 값
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: terrascan.sarif  
+
   Terraform:
-    needs: SCAN
+    needs: SCAN # SCAN 작업 이후에 실행하겠다.
     name: Terraform
     runs-on: ubuntu-latest
     steps:
@@ -53,19 +54,20 @@ jobs:
           terraform_version: $TF_VERSION
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Terraform Fmt
+        # cmd에서 입력한 작업을 git Action에 선언적으로 명시
+      - name: Terraform Fmt # 코드 포맷팅
         id: fmt
         run: terraform fmt -recursive -check
         continue-on-error: true
 
-      - name: Terraform init
+      - name: Terraform init # 테라폼 실행을 위해 init 수행
         id: init
         run: terraform init -upgrade
         # working-directory: ${{ env.working-directory }}
 
-      - name: Terraform validate
+      - name: Terraform validate # 코드 문법적 오류 검사
         id: validate
-        run: terraform validate -no-color
+        run: terraform validate -no-color # 파이프라인 구성을 위한 옵션
 
       - name: Terraform plan
         id: plan
@@ -105,7 +107,7 @@ jobs:
 
       - name: Terraform apply
         id: apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' # 메인브런치에 push가 될 때만 apply 수행
         run: terraform apply -auto-approve -var=prefix="$MY_PREFIX" -input=false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
